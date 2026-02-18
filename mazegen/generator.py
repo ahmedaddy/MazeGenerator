@@ -261,11 +261,6 @@ class MazeGenerator:
             - Entry coordinates
             - Exit coordinates
             - Solution path (N, E, S, W moves)
-
-            N = 2³ = 8
-            E = 2² = 4
-            S = 2¹ = 2
-            W = 2⁰ = 1
         """
         with open(filename, 'w') as f:
             for y in range(maze.height):
@@ -273,10 +268,10 @@ class MazeGenerator:
                 for x in range(maze.width):
                     cell = maze.get_cell(x, y)
                     if cell:
-                        row += f'{(cell.walls["N"] * 8 +
-                                   cell.walls["E"] * 4 +
+                        row += f'{(cell.walls["N"] * 0 +
+                                   cell.walls["E"] * 1 +
                                    cell.walls["S"] * 2 +
-                                   cell.walls["W"] * 1):X}'
+                                   cell.walls["W"] * 3):X}'
                 f.write(row + '\n')
             f.write('\n')
             f.write(f'{maze.entry[0]} {maze.entry[1]}\n')
