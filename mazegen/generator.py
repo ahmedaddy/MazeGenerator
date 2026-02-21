@@ -1,27 +1,40 @@
 import random
-from typing import List, Tuple, Optional
-from dataclasses import dataclass, field
+from typing import List, Tuple, Optional, Dict
 
 
-@dataclass
 class Cell:
-    x: int
-    y: int
-    walls: dict = field(default_factory=lambda: {
-        'N': True,
-        'E': True,
-        'S': True,
-        'W': True
-    })
-    visited: bool = False
+    def __init__(self, x: int, y: int):
+        self.x: int = x
+        self.y: int = y
+        self.walls: dict = {
+            'N': True,
+            'E': True,
+            'S': True,
+            'W': True
+        }
+        self.visited: bool = False
 
     def has_wall(self, direction: str) -> bool:
+        """
+        Check if there's a wall in the given direction.
+        :param direction: Direction to check ('N', 'E', 'S', 'W')
+        :return: True if wall exists, False otherwise
+        """
         return self.walls[direction]
 
     def remove_wall(self, direction: str) -> None:
+        """
+        Remove wall in the given direction.
+        :param direction: Direction to remove wall ('N', 'E', 'S', 'W')
+        """
         self.walls[direction] = False
 
     def add_wall(self, direction: str) -> None:
+        """
+        Add wall in the given direction.
+
+        :param direction: Direction to add wall ('N', 'E', 'S', 'W')
+        """
         self.walls[direction] = True
 
 
@@ -38,10 +51,10 @@ class Maze:
             entry: Entry position (x, y)
             exit: Exit position (x, y)
         """
-        self.width = width
-        self.height = height
-        self.entry = entry
-        self.exit = exit
+        self.width: int = width
+        self.height: int = height
+        self.entry: Tuple[int, int] = entry
+        self.exit: Tuple[int, int] = exit
         self.cells: List[List[Cell]] = [
             [Cell(x, y) for x in range(width)]
             for y in range(height)
@@ -50,22 +63,23 @@ class Maze:
 
     def get_cell(self, x: int, y: int) -> Optional[Cell]:
         """Get cell at position (x, y)."""
-        if 0 <= x < self.width and 0 <= y < self.height:
+        if (0 <= x and x < self.width) and (0 <= y and y < self.height):
             return self.cells[y][x]
         return None
 
     def get_neighbors(self, x: int, y: int) -> List[Tuple[str, Cell]]:
         """Get neighbors of cell at (x, y)."""
-        directions = {
+        directions: Dict[str, Tuple[int, int]] = {
             'N': (0, -1),
             'E': (1, 0),
             'S': (0, 1),
             'W': (-1, 0)
         }
-        neighbors = []
+        neighbors: List[Tuple[int, int, str]] = []
         for dir_from, (dx, dy) in directions.items():
             nx, ny = x + dx, y + dy
-            if 0 <= nx < self.width and 0 <= ny < self.height:
+            if ((0 <= nx and nx < self.width) and
+                    (0 <= ny and ny < self.height)):
                 neighbors.append((nx, ny, dir_from))
         return neighbors
 
@@ -88,16 +102,23 @@ class MazeGenerator:
         self.height = height
         self.perfect = perfect
         self.loop_factor = max(0.0, min(1.0, loop_factor))
-        self.rng = random.Random(seed)
+        self.ran = random.Random(seed)
 
     def generate(self, entry: Tuple[int, int], exit: Tuple[int, int]) -> Maze:
-        """Generate maze using recursive backtracking."""
+        """
+        Generate maze with given entry and exit points.
+        :param entry: Entry point (x, y)
+        :param exit: Exit point (x, y)
+        :return: Generated Maze object
+        """
         ex, ey = entry
         xx, xy = exit
 
-        if not (0 <= ex < self.width and 0 <= ey < self.height):
+        if not ((0 <= ex and ex < self.width) and
+                (0 <= ey and ey < self.height)):
             raise ValueError(f"Entry point out of bounds: {entry}")
-        if not (0 <= xx < self.width and 0 <= xy < self.height):
+        if not ((0 <= xx and xx < self.width) and
+                (0 <= xy and xy < self.height)):
             raise ValueError(f"Exit point out of bounds: {exit}")
         if entry == exit:
             raise ValueError("Entry and exit points cannot be the same.")
@@ -109,14 +130,24 @@ class MazeGenerator:
         self.add_border_walls(maze)
         return maze
 
-    OPPOSITE = {'N': 'S', 'S': 'N', 'E': 'W', 'W': 'E'}
-    DIRECTION_OFFSETS = {'N': (0, -1), 'E': (1, 0), 'S': (0, 1), 'W': (-1, 0)}
+    OPPOSITE: Dict[str, str] = {'N': 'S', 'S': 'N', 'E': 'W', 'W': 'E'}
+    DIRECTION_OFFSETS: Dict[str, Tuple[int, int]] = {'N': (0, -1),
+                                                     'E': (1, 0),
+                                                     'S': (0, 1),
+                                                     'W': (-1, 0)}
 
     def recursive_backtracker(self,
                               maze: Maze,
                               start_x: int,
                               start_y: int) -> None:
-        stack = [(start_x, start_y)]
+        """
+        Generate maze using recursive backtracker algorithm.
+
+        :param maze: Maze to modify
+        :param start_x: Starting x-coordinate
+        :param start_y: Starting y-coordinate
+        """
+        stack: Tuple[int, int] = [(start_x, start_y)]
         current_cell = maze.get_cell(start_x, start_y)
         if current_cell:
             current_cell.visited = True
@@ -128,7 +159,7 @@ class MazeGenerator:
                 if not maze.get_cell(nx, ny).visited
             ]
             if unvisiteed_neighbors:
-                nx, ny, dir = self.rng.choice(unvisiteed_neighbors)
+                nx, ny, dir = self.ran.choice(unvisiteed_neighbors)
                 current = maze.get_cell(x, y)
                 neighbor = maze.get_cell(nx, ny)
                 if current and neighbor:
@@ -173,10 +204,10 @@ class MazeGenerator:
                         internal_walls.append((x, y, 'S'))
 
         num_to_remove = int(len(internal_walls) * self.loop_factor)
-        walls_to_remove = self.rng.sample(internal_walls,
+        walls_to_remove = self.ran.sample(internal_walls,
                                           min(num_to_remove,
                                               len(internal_walls)))
-
+        print(walls_to_remove)
         for x, y, direction in walls_to_remove:
             cell = maze.get_cell(x, y)
             dx, dy = self.DIRECTION_OFFSETS[direction]
@@ -186,23 +217,20 @@ class MazeGenerator:
                 neighbor.remove_wall(self.OPPOSITE[direction])
 
     def add_42_pattern(self, maze: Maze) -> None:
-        """Embed a '42' pattern using fully closed cells."""
-        pattern_4 = [
-            [1, 0, 1],
-            [1, 0, 1],
-            [1, 1, 1],
-            [0, 0, 1],
-            [0, 0, 1],
+        """
+        Embed a '42' pattern using fully closed cells.
+
+        :param maze: Maze to modify
+        """
+        pattern = [
+            [1, 0, 1, 0, 1, 1, 1],
+            [1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 1, 0, 1, 1, 1],
+            [0, 0, 1, 0, 1, 0, 0],
+            [0, 0, 1, 0, 1, 1, 1],
         ]
-        pattern_2 = [
-            [1, 1, 1],
-            [0, 0, 1],
-            [1, 1, 1],
-            [1, 0, 0],
-            [1, 1, 1],
-        ]
-        pattern_w = len(pattern_4[0]) + 1 + len(pattern_2[0])  # 3+1+3 = 7
-        pattern_h = len(pattern_4)  # 5
+        pattern_w = len(pattern[0])
+        pattern_h = len(pattern)
         if self.width < pattern_w + 2 or self.height < pattern_h + 2:
             print("Maze too small for 42 pattern.")
             return
@@ -210,8 +238,10 @@ class MazeGenerator:
         offset_y = (self.height - pattern_h) // 2
         entry_x, entry_y = maze.entry
         exit_x, exit_y = maze.exit
-        for py, row in enumerate(pattern_4):
+        for py, row in enumerate(pattern):
+            # print(py, row)
             for px, val in enumerate(row):
+                # print(px, val)
                 if val == 1:
                     cx, cy = offset_x + px, offset_y + py
                     if (cx, cy) == (entry_x, entry_y):
@@ -219,26 +249,26 @@ class MazeGenerator:
                     if (cx, cy) == (exit_x, exit_y):
                         continue
                     self.close_cell(maze, cx, cy)
-        for py, row in enumerate(pattern_2):
-            for px, val in enumerate(row):
-                if val == 1:
-                    cx = offset_x + len(pattern_4[0]) + 1 + px
-                    cy = offset_y + py
-                    if (cx, cy) == (entry_x, entry_y):
-                        continue
-                    if (cx, cy) == (exit_x, exit_y):
-                        continue
-                    self.close_cell(maze, cx, cy)
 
     def close_cell(self, maze: Maze, x: int, y: int) -> None:
-        """Close all 4 walls of a cell and update neighbor walls."""
+        """
+        Close all 4 walls of a cell and update neighbor walls.
+
+        :param maze: Maze to modify
+        :param x: X-coordinate of cell to close
+        :param y: Y-coordinate of cell to close
+        """
         cell = maze.get_cell(x, y)
         if not cell:
             return
         cell.visited = True
 
     def add_border_walls(self, maze: Maze) -> None:
-        """Ensure all outer edges of the maze have walls."""
+        """
+        Ensure all outer edges of the maze have walls.
+
+        :param maze: Maze to modify
+        """
         for x in range(maze.width):
             maze.get_cell(x, 0).add_wall('N')
             maze.get_cell(x, maze.height - 1).add_wall('S')
@@ -268,40 +298,15 @@ class MazeGenerator:
                 for x in range(maze.width):
                     cell = maze.get_cell(x, y)
                     if cell:
-                        row += f'{(cell.walls["N"] * 0 +
-                                   cell.walls["E"] * 1 +
-                                   cell.walls["S"] * 2 +
-                                   cell.walls["W"] * 3):X}'
+                        value = (
+                            (cell.walls['N'] << 0) |
+                            (cell.walls['E'] << 1) |
+                            (cell.walls['S'] << 2) |
+                            (cell.walls['W'] << 3)
+                        )
+                        row += f'{value:X}'
                 f.write(row + '\n')
             f.write('\n')
             f.write(f'{maze.entry[0]} {maze.entry[1]}\n')
             f.write(f'{maze.exit[0]} {maze.exit[1]}\n')
             f.write(''.join(maze.solution) + '\n')
-
-
-def test_maze_generation():
-    # Non-perfect maze: loop_factor=0.1 means ~10% of internal walls removed
-    generator = MazeGenerator(width=20, height=20, perfect=False,
-                              loop_factor=0.1, seed=None)
-    maze = generator.generate(entry=(0, 1), exit=(9, 11))
-    generator.save_to_file(maze, "maze.txt")
-
-    maze_str = ""
-    for y in range(maze.height):
-        for x in range(maze.width):
-            cell = maze.get_cell(x, y)
-            maze_str += "+" + ("---" if cell.has_wall('N') else "   ")
-        maze_str += "+\n"
-        for x in range(maze.width):
-            cell = maze.get_cell(x, y)
-            maze_str += ("|" if cell.has_wall('W') else " ") + "   "
-        maze_str += ("|\n" if maze.get_cell(maze.width - 1, y).has_wall('E') else " \n")
-    for x in range(maze.width):
-        cell = maze.get_cell(x, maze.height - 1)
-        maze_str += "+" + ("---" if cell.has_wall('S') else "   ")
-    maze_str += "+\n"
-    print(maze_str)
-
-
-if __name__ == "__main__":
-    test_maze_generation()
