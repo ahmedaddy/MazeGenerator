@@ -1,4 +1,4 @@
-from mazegen.generator import MazeGenerator
+from .generator import Maze
+from .generator import MazeGenerator
 
-__all__ = ["MazeGenerator"]
-__version__ = "1.0.0"
+__all__ = ["Maze", "MazeGenerator"]
