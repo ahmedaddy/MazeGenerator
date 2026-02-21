@@ -207,7 +207,6 @@ class MazeGenerator:
         walls_to_remove = self.ran.sample(internal_walls,
                                           min(num_to_remove,
                                               len(internal_walls)))
-        print(walls_to_remove)
         for x, y, direction in walls_to_remove:
             cell = maze.get_cell(x, y)
             dx, dy = self.DIRECTION_OFFSETS[direction]
